@@ -1,0 +1,8 @@
+---
+apiVersion: v1
+kind: ConfigMap
+data:
+  store-type: "consul"
+  consul-address: "consul:8500"
+metadata:
+  name: crypt-controller-config

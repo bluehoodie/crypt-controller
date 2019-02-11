@@ -1,0 +1,11 @@
+apiVersion: core.bluehoodie.io/v1alpha1
+kind: Crypt
+metadata:
+  name: test-crypt
+  namespace: default
+spec:
+  keys:
+    - crypt/test/foo
+  namespaces:
+    - default
+    - foo-*
