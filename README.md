@@ -62,7 +62,6 @@ This example would create an `Opaque` secret named `foo` based on data provided 
 ## Data Model
 
 The values stored in the key-values stores are expected to be key value maps of type string -> []byte
-```
 
 Secret type, if not defined, defaults to `Opaque`.
 
@@ -82,7 +81,7 @@ In addition, you are required to provide all environment variables required to c
 
 Current TODOs include:
 
-- Improve test coverage.
+- Improve test coverage
 - Create Helm chart
 
 ## Contributing
