@@ -2,11 +2,19 @@ package controller
 
 import (
 	"fmt"
+	"github.com/bluehoodie/crypt-controller/pkg/store"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/tools/record"
 	"regexp"
 	"time"
 
+	"github.com/bluehoodie/crypt-controller/pkg/apis/crypt/v1alpha1"
+	clientset "github.com/bluehoodie/crypt-controller/pkg/client/clientset/versioned"
+	cryptscheme "github.com/bluehoodie/crypt-controller/pkg/client/clientset/versioned/scheme"
+	informers "github.com/bluehoodie/crypt-controller/pkg/client/informers/externalversions/crypt/v1alpha1"
+	listers "github.com/bluehoodie/crypt-controller/pkg/client/listers/crypt/v1alpha1"
+
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -18,16 +26,8 @@ import (
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	v1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	log "k8s.io/klog"
-
-	"github.com/bluehoodie/crypt-controller/pkg/apis/crypt/v1alpha1"
-	clientset "github.com/bluehoodie/crypt-controller/pkg/client/clientset/versioned"
-	cryptscheme "github.com/bluehoodie/crypt-controller/pkg/client/clientset/versioned/scheme"
-	informers "github.com/bluehoodie/crypt-controller/pkg/client/informers/externalversions/crypt/v1alpha1"
-	listers "github.com/bluehoodie/crypt-controller/pkg/client/listers/crypt/v1alpha1"
-	"github.com/bluehoodie/crypt-controller/pkg/store"
 )
 
 const (
@@ -224,10 +224,10 @@ func (c *Controller) syncHandler(key string) error {
 	}
 
 	// create secrets in the appropriate namespaces
-	for _, key := range crypt.Spec.Keys {
+	for _, sec := range crypt.Spec.Secrets {
 		for _, namespacePattern := range crypt.Spec.Namespaces {
 			for _, ns := range c.findNamespaceMatches(namespacePattern) {
-				err := c.createSecret(key, crypt, ns)
+				err := c.createSecret(sec, crypt, ns)
 				if err != nil {
 					log.Infof("could not create secret for key %s in namespace %s: %v", key, namespace, err)
 				}
@@ -255,10 +255,10 @@ func (c *Controller) deleteCrypt(obj interface{}) {
 
 	// delete every secret owned by this crypt
 	crypt := obj.(*v1alpha1.Crypt)
-	for _, key := range crypt.Spec.Keys {
+	for _, sec := range crypt.Spec.Secrets {
 		for _, namespacePattern := range crypt.Spec.Namespaces {
 			for _, namespace := range c.findNamespaceMatches(namespacePattern) {
-				if err := c.deleteSecret(key, namespace); err != nil {
+				if err := c.deleteSecret(sec, namespace); err != nil {
 					utilruntime.HandleError(err)
 				}
 			}
@@ -268,8 +268,8 @@ func (c *Controller) deleteCrypt(obj interface{}) {
 	c.queue.Forget(key)
 }
 
-func (c *Controller) createSecret(key string, crypt *v1alpha1.Crypt, namespace string) error {
-	obj, err := c.store.Get(key)
+func (c *Controller) createSecret(sec v1alpha1.SecretDefinition, crypt *v1alpha1.Crypt, namespace string) error {
+	obj, err := c.store.Get(sec.GetKey())
 	if err != nil {
 		log.Errorf("could not get value from store: %v", err)
 		return err
@@ -278,7 +278,7 @@ func (c *Controller) createSecret(key string, crypt *v1alpha1.Crypt, namespace s
 	secret := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      obj.GetName(),
+			Name:      sec.GetName(),
 			Namespace: namespace,
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(crypt, schema.GroupVersionKind{
@@ -288,20 +288,15 @@ func (c *Controller) createSecret(key string, crypt *v1alpha1.Crypt, namespace s
 				}),
 			},
 		},
-		Type: corev1.SecretType(obj.GetSecretType()),
+		Type: corev1.SecretType(sec.GetType()),
 		Data: obj.GetData(),
 	}
 	_, err = c.kubeClientset.CoreV1().Secrets(namespace).Create(secret)
 	return err
 }
 
-func (c *Controller) deleteSecret(key string, namespace string) error {
-	obj, err := c.store.Get(key)
-	if err != nil {
-		return err
-	}
-
-	return c.kubeClientset.CoreV1().Secrets(namespace).Delete(obj.Name, metav1.NewDeleteOptions(3))
+func (c *Controller) deleteSecret(sec v1alpha1.SecretDefinition, namespace string) error {
+	return c.kubeClientset.CoreV1().Secrets(namespace).Delete(sec.GetName(), metav1.NewDeleteOptions(3))
 }
 
 func (c *Controller) handleNamespaceAdd(obj interface{}) {

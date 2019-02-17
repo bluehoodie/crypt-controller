@@ -25,17 +25,17 @@ func New(config *api.Config) (store.Store, error) {
 	return &Store{client: client}, nil
 }
 
-func (s *Store) Get(key string) (*store.Object, error) {
+func (s *Store) Get(key string) (store.Object, error) {
 	pair, _, err := s.client.KV().Get(key, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	var obj *store.Object
+	var obj map[string][]byte
 	err = json.Unmarshal(pair.Value, &obj)
 	if err != nil {
 		return nil, store.InvalidDataError
 	}
 
-	return obj, nil
+	return store.Object(obj), nil
 }
