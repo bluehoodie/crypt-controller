@@ -287,6 +287,8 @@ func (c *Controller) createSecret(sec v1alpha1.SecretDefinition, crypt *v1alpha1
 					Kind:    "Crypt",
 				}),
 			},
+			Labels:      sec.GetLabels(),
+			Annotations: sec.GetAnnotations(),
 		},
 		Type: corev1.SecretType(sec.GetType()),
 		Data: obj.GetData(),
