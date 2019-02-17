@@ -36,9 +36,11 @@ type CryptSpec struct {
 }
 
 type SecretDefinition struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
-	Key  string `json:"key"`
+	Name        string            `json:"name"`
+	Type        string            `json:"type"`
+	Key         string            `json:"key"`
+	Labels      map[string]string `json:"labels"`
+	Annotations map[string]string `json:"annotations"`
 }
 
 func (in *SecretDefinition) GetName() string {
@@ -54,6 +56,14 @@ func (in *SecretDefinition) GetType() string {
 
 func (in *SecretDefinition) GetKey() string {
 	return in.Key
+}
+
+func (in *SecretDefinition) GetLabels() map[string]string {
+	return in.Labels
+}
+
+func (in *SecretDefinition) GetAnnotations() map[string]string {
+	return in.Annotations
 }
 
 type CryptStatus struct {
