@@ -14,6 +14,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -30,8 +31,29 @@ type Crypt struct {
 }
 
 type CryptSpec struct {
-	Keys       []string `json:"keys"`
-	Namespaces []string `json:"namespaces"`
+	Secrets    []SecretDefinition `json:"secrets"`
+	Namespaces []string           `json:"namespaces"`
+}
+
+type SecretDefinition struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
+	Key  string `json:"key"`
+}
+
+func (in *SecretDefinition) GetName() string {
+	return in.Name
+}
+
+func (in *SecretDefinition) GetType() string {
+	if in.Type == "" {
+		return string(v1.SecretTypeOpaque)
+	}
+	return in.Type
+}
+
+func (in *SecretDefinition) GetKey() string {
+	return in.Key
 }
 
 type CryptStatus struct {

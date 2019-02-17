@@ -20,11 +20,11 @@ $ kubectl create -f artifacts/crd.yaml
 
 coming soon
 
-## Installing crypt-controller using kubectl
+## Example installation of crypt-controller using kubectl
 
-In order to run crypt-controller in a Kubernetes cluster quickly, the easiest way is for you to create a ConfigMap to hold crypt-controller configuration.
+In order to run crypt-controller in a Kubernetes cluster quickly, the easiest way is for you to create a ConfigMap to hold crypt-controller configuration. 
 
-An example is provided at [`crypt-controller-configmap.yaml`](https://github.com/bluehoodie/crypt-controller/blob/master/example/crypt-controller-configmap.yaml)
+An example is provided at [`crypt-controller-configmap.yaml`](https://github.com/bluehoodie/crypt-controller/blob/master/example/crypt-controller-configmap.yaml). This example assumes a Consul service named `consul` is running on port 8500.
 
 Create k8s configmap:
 
@@ -45,38 +45,35 @@ apiVersion: core.bluehoodie.io/v1alpha1
 kind: Crypt
 metadata:
   name: test-crypt
+  namespace: default
 spec:
-  keys:
-    - test/foo
+  secrets:
+    - name: foo
+      type: Opaque
+      key: crypt/test/foo
   namespaces:
     - default
     - foo-*
+
 ```
 
-This example would create a secret based on data provided in the value at `test/foo` in the default namespace and all namespaces matching the regex `foo-*`
+This example would create an `Opaque` secret named `foo` based on data provided in the value at `test/foo` in the default namespace and all namespaces matching the regex `foo-*`
 
 ## Data Model
 
-The values stored in the key-values stores are expected to be JSON objects, with the following structure:
-
-```go
-type Object struct {
-	Name       string            `json:"name"`
-	SecretType string            `json:"secret_type,omitempty"`
-	Data       map[string][]byte `json:"data"`
-}
-```
+The values stored in the key-values stores are expected to be key value maps of type string -> []byte
 
 Secret type, if not defined, defaults to `Opaque`.
 
 ## Currently supported backends:
 
 - Consul
+- Vault
 
 ## Environment variables
 
 Required environment variables by `crypt-controller`:
-* `STORE_TYPE` - ex: "consul"
+* `STORE_TYPE` - ex: "consul" or "vault"
 
 In addition, you are required to provide all environment variables required to connect to the key-value storage.
 
@@ -84,8 +81,7 @@ In addition, you are required to provide all environment variables required to c
 
 Current TODOs include:
 
-- Improve test coverage.
-- Support Vault 
+- Improve test coverage
 - Create Helm chart
 
 ## Contributing

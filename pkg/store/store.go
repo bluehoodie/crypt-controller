@@ -2,8 +2,6 @@ package store
 
 import (
 	"github.com/pkg/errors"
-
-	"k8s.io/api/core/v1"
 )
 
 var (
@@ -12,30 +10,16 @@ var (
 )
 
 type Store interface {
-	Get(key string) (*Object, error)
+	Get(key string) (Object, error)
 }
 
-type Object struct {
-	Name       string            `json:"name"`
-	SecretType string            `json:"secret_type,omitempty"`
-	Data       map[string][]byte `json:"data"`
-}
+type Object map[string][]byte
 
-func (o *Object) GetName() string {
-	return o.Name
-}
-
-func (o *Object) GetSecretType() string {
-	if o.SecretType == "" {
-		return string(v1.SecretTypeOpaque)
-	}
-	return o.SecretType
-}
-
-func (o *Object) GetData() map[string][]byte {
-	if o.Data == nil {
-		o.Data = make(map[string][]byte)
+func (o Object) GetData() map[string][]byte {
+	if o == nil {
+		data := make(map[string][]byte)
+		return data
 	}
 
-	return o.Data
+	return map[string][]byte(o)
 }

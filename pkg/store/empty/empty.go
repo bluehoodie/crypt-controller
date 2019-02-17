@@ -9,6 +9,6 @@ func New() (store.Store, error) {
 	return &Store{}, nil
 }
 
-func (*Store) Get(key string) (*store.Object, error) {
+func (*Store) Get(key string) (store.Object, error) {
 	return nil, store.NotFoundError
 }

@@ -1,0 +1,9 @@
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  namespace: default
+  name: service-reader
+rules:
+  - apiGroups: ["", "core.bluehoodie.io"]
+    resources: ["services", "namespaces", "pods", "secrets", "crypts", "events"]
+    verbs: ["get", "watch", "list", "update", "create", "patch"]

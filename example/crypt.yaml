@@ -4,8 +4,9 @@ metadata:
   name: test-crypt
   namespace: default
 spec:
-  keys:
-    - crypt/test/foo
+  secrets:
+    - name: foo
+      key: crypt/test/foo
   namespaces:
     - default
     - foo-*
