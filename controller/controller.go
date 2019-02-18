@@ -2,9 +2,6 @@ package controller
 
 import (
 	"fmt"
-	"github.com/bluehoodie/crypt-controller/pkg/store"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/tools/record"
 	"regexp"
 	"time"
 
@@ -13,8 +10,10 @@ import (
 	cryptscheme "github.com/bluehoodie/crypt-controller/pkg/client/clientset/versioned/scheme"
 	informers "github.com/bluehoodie/crypt-controller/pkg/client/informers/externalversions/crypt/v1alpha1"
 	listers "github.com/bluehoodie/crypt-controller/pkg/client/listers/crypt/v1alpha1"
+	"github.com/bluehoodie/crypt-controller/pkg/store"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -26,6 +25,7 @@ import (
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	v1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	log "k8s.io/klog"
 )
@@ -253,18 +253,6 @@ func (c *Controller) deleteCrypt(obj interface{}) {
 		return
 	}
 
-	// delete every secret owned by this crypt
-	crypt := obj.(*v1alpha1.Crypt)
-	for _, sec := range crypt.Spec.Secrets {
-		for _, namespacePattern := range crypt.Spec.Namespaces {
-			for _, namespace := range c.findNamespaceMatches(namespacePattern) {
-				if err := c.deleteSecret(sec, namespace); err != nil {
-					utilruntime.HandleError(err)
-				}
-			}
-		}
-	}
-
 	c.queue.Forget(key)
 }
 
@@ -295,10 +283,6 @@ func (c *Controller) createSecret(sec v1alpha1.SecretDefinition, crypt *v1alpha1
 	}
 	_, err = c.kubeClientset.CoreV1().Secrets(namespace).Create(secret)
 	return err
-}
-
-func (c *Controller) deleteSecret(sec v1alpha1.SecretDefinition, namespace string) error {
-	return c.kubeClientset.CoreV1().Secrets(namespace).Delete(sec.GetName(), metav1.NewDeleteOptions(3))
 }
 
 func (c *Controller) handleNamespaceAdd(obj interface{}) {
