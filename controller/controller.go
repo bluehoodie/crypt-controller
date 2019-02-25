@@ -267,7 +267,7 @@ func (c *Controller) createSecret(sec v1alpha1.SecretDefinition, crypt *v1alpha1
 		Data: obj.GetData(),
 	}
 	_, err = c.kubeClientset.CoreV1().Secrets(namespace).Create(secret)
-	if err != nil && isAlreadyExistsError(err) {
+	if err != nil && errors.IsAlreadyExists(err) {
 		_, err = c.kubeClientset.CoreV1().Secrets(namespace).Update(secret)
 	}
 	return err
@@ -367,16 +367,4 @@ func (c *Controller) findNamespaceMatches(namespacePattern string) []string {
 	}
 
 	return result
-}
-
-func isAlreadyExistsError(err error) bool {
-	v1err, ok := err.(*errors.StatusError)
-	if !ok {
-		return false
-	}
-
-	if v1err.ErrStatus.Code == 409 {
-		return true
-	}
-	return false
 }
