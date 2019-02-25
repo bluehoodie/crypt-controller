@@ -100,9 +100,6 @@ func New(
 		UpdateFunc: func(old, new interface{}) {
 			c.enqueueCrypt(new)
 		},
-		DeleteFunc: func(obj interface{}) {
-			c.deleteCrypt(obj)
-		},
 	})
 
 	secreteInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -242,18 +239,6 @@ func (c *Controller) syncHandler(key string) error {
 
 	c.recorder.Event(crypt, corev1.EventTypeNormal, SuccessSynced, MessageResourceSynced)
 	return nil
-}
-
-func (c *Controller) deleteCrypt(obj interface{}) {
-	var key string
-	var err error
-
-	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
-		utilruntime.HandleError(err)
-		return
-	}
-
-	c.queue.Forget(key)
 }
 
 func (c *Controller) createSecret(sec v1alpha1.SecretDefinition, crypt *v1alpha1.Crypt, namespace string) error {
