@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crypt-controller
+  labels:
+    app: crypt-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crypt-controller
+  template:
+    metadata:
+      labels:
+        app: crypt-controller
+    spec:
+      containers:
+        - image: bluehoodie/crypt-controller:latest
+          imagePullPolicy: Always
+          name: crypt-controller
+          env:
+            - name: STORE_TYPE
+              valueFrom:
+                configMapKeyRef:
+                  name: crypt-controller-config
+                  key: store-type
+            - name: CONSUL_HTTP_ADDR
+              valueFrom:
+                configMapKeyRef:
+                  name: crypt-controller-config
+                  key: consul-address
