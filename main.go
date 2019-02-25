@@ -79,7 +79,7 @@ func main() {
 	}
 
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, 30*time.Second)
-	cryptInformerFactory := informers.NewSharedInformerFactory(cryptClient, 30*time.Second)
+	cryptInformerFactory := informers.NewSharedInformerFactory(cryptClient, 10*time.Second)
 
 	c := controller.New(kubeClient, cryptClient,
 		kubeInformerFactory.Core().V1().Namespaces(),
