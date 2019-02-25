@@ -2,7 +2,6 @@ package consul
 
 import (
 	"encoding/json"
-
 	"github.com/bluehoodie/crypt-controller/pkg/store"
 
 	"github.com/hashicorp/consul/api"
@@ -29,6 +28,10 @@ func (s *Store) Get(key string) (store.Object, error) {
 	pair, _, err := s.client.KV().Get(key, nil)
 	if err != nil {
 		return nil, err
+	}
+
+	if pair == nil {
+		return nil, store.NotFoundError
 	}
 
 	var obj map[string][]byte
