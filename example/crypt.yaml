@@ -6,7 +6,8 @@ metadata:
 spec:
   secrets:
     - name: foo
-      key: crypt/test/foo
+      key: crypt/dev/foo
+    - name: bar
+      key: crypt/dev/bar
   namespaces:
-    - default
-    - foo-*
+    - dev-*

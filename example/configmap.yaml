@@ -6,3 +6,4 @@ data:
   consul-address: "consul:8500"
 metadata:
   name: crypt-controller-config
+  namespace: kube-system
