@@ -2,6 +2,7 @@ package consul
 
 import (
 	"encoding/json"
+
 	"github.com/bluehoodie/crypt-controller/pkg/store"
 
 	"github.com/hashicorp/consul/api"
