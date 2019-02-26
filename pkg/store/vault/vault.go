@@ -31,6 +31,10 @@ func (s *Store) Get(key string) (store.Object, error) {
 		return nil, err
 	}
 
+	if secret == nil {
+		return nil, store.NotFoundError
+	}
+
 	obj, err := dataToObject(secret.Data)
 	if err != nil {
 		return nil, err
