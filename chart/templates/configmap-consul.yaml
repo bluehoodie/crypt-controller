@@ -1,0 +1,14 @@
+{{- if .Values.store.consul.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "crypt-controller.name" . }}-consul-configmap
+  namespace: {{ .Values.deployment.namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "crypt-controller.name" . }}
+    helm.sh/chart: {{ include "crypt-controller.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+data:
+{{toYaml .Values.store.consul.env | indent 2}}
+{{- end}}

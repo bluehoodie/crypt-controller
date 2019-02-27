@@ -41,7 +41,6 @@ In addition, you are required to provide all environment variables required to c
 Current TODOs include:
 
 - Improve test coverage
-- Create Helm chart
 
 ## Contributing
 
