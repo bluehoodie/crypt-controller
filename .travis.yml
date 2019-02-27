@@ -1,0 +1,10 @@
+sudo: required
+services:
+  - docker
+git:
+  depth: false
+script:
+  - if [[ $TRAVIS_PULL_REQUEST == "false" ]]; then docker build --rm -t bluehoodie/crypt-controller .; fi
+  - if [[ $TRAVIS_PULL_REQUEST == "false" ]]; then docker login -u="$DOCKERHUB_LOGIN" -p="$DOCKERHUB_PASSWORD"; fi
+  - if [[ $TRAVIS_PULL_REQUEST == "false" ]] && [[ $TRAVIS_BRANCH == "master" ]]; then docker push bluehoodie/crypt-controller; fi
+  - if [[ $TRAVIS_PULL_REQUEST == "false" ]] && [[ $TRAVIS_BRANCH != "master" ]]; then docker tag bluehoodie/crypt-controller:latest bluehoodie/crypt-controller:$TRAVIS_BRANCH && docker push bluehoodie/crypt-controller; fi
