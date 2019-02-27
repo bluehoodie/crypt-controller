@@ -1,0 +1,40 @@
+# Default values for chart.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+deployment:
+  namespace: crypt-system
+  replicaCount: 1
+
+image:
+  repository: bluehoodie/crypt-controller
+  tag: latest
+  pullPolicy: Always
+
+nameOverride: ""
+fullnameOverride: ""
+
+resources:
+   limits:
+    cpu: 100m
+    memory: 128Mi
+   requests:
+    cpu: 100m
+    memory: 128Mi
+
+storeType: invalid # replace with valid store type and configure below:
+store:
+  consul:
+    enabled: false
+    env: {}
+  vault:
+    enabled: false
+    env: {}
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+serviceaccount:
+  name: default
+  namespace: default
