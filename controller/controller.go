@@ -37,8 +37,6 @@ const (
 	MessageResourceSynced = "Crypt synced successfully"
 )
 
-const controllerAgentName = "crypt-controller"
-
 type Controller struct {
 	queue workqueue.RateLimitingInterface
 
@@ -214,14 +212,16 @@ func (c *Controller) syncHandler(key string) error {
 		}
 	}
 
+	var namespaceMatches []string
+	for _, pattern := range crypt.Spec.Namespaces {
+		namespaceMatches = append(namespaceMatches, c.findNamespaceMatches(pattern)...)
+	}
+
 	// create secrets in the appropriate namespaces
 	for _, sec := range crypt.Spec.Secrets {
-		for _, namespacePattern := range crypt.Spec.Namespaces {
-			for _, ns := range c.findNamespaceMatches(namespacePattern) {
-				_, err := c.createSecret(sec, crypt, ns)
-				if err != nil {
-					log.Infof("could not create secret for key %s in namespace %s: %v", key, namespace, err)
-				}
+		for _, ns := range namespaceMatches {
+			if _, err := c.createSecret(sec, crypt, ns); err != nil {
+				log.Infof("could not create secret for key %s in namespace %s: %v", key, namespace, err)
 			}
 		}
 	}
