@@ -1,9 +1,17 @@
 sudo: required
+language: go
+go:
+  - "1.10"
 services:
   - docker
 git:
   depth: false
+before_script:
+  - go get -u github.com/golang/dep/cmd/dep
+  - dep ensure
 script:
+  - go test -race -v `go list ./... | grep -v -e /vendor/ -e /mock/`
+after_success:
   - if [[ $TRAVIS_PULL_REQUEST == "false" ]]; then docker build --rm -t bluehoodie/crypt-controller .; fi
   - if [[ $TRAVIS_PULL_REQUEST == "false" ]]; then docker login -u="$DOCKERHUB_LOGIN" -p="$DOCKERHUB_PASSWORD"; fi
   - if [[ $TRAVIS_PULL_REQUEST == "false" ]] && [[ $TRAVIS_BRANCH == "master" ]]; then docker push bluehoodie/crypt-controller; fi

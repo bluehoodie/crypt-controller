@@ -6,9 +6,9 @@ type Store struct {
 	m map[string]store.Object
 }
 
-func New() (store.Store, error) {
+func New(m map[string]store.Object) (store.Store, error) {
 	s := Store{
-		m: make(map[string]store.Object),
+		m: m,
 	}
 
 	return &s, nil

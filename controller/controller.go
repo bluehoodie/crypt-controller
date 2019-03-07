@@ -22,7 +22,6 @@ import (
 	coreinformers "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
-	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	v1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
@@ -65,15 +64,10 @@ func New(
 	secreteInformer coreinformers.SecretInformer,
 	cryptInformer informers.CryptInformer,
 	store store.Store,
+	eventRecorder record.EventRecorder,
 ) *Controller {
 
 	utilruntime.Must(cryptscheme.AddToScheme(scheme.Scheme))
-
-	log.V(4).Info("Creating event broadcaster")
-	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(log.Infof)
-	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeClientset.CoreV1().Events("")})
-	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 
 	c := Controller{
 		kubeClientset:  kubeClientset,
@@ -88,7 +82,7 @@ func New(
 
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "crypt-controller"),
 
-		recorder: recorder,
+		recorder: eventRecorder,
 
 		store: store,
 	}
@@ -224,7 +218,7 @@ func (c *Controller) syncHandler(key string) error {
 	for _, sec := range crypt.Spec.Secrets {
 		for _, namespacePattern := range crypt.Spec.Namespaces {
 			for _, ns := range c.findNamespaceMatches(namespacePattern) {
-				err := c.createSecret(sec, crypt, ns)
+				_, err := c.createSecret(sec, crypt, ns)
 				if err != nil {
 					log.Infof("could not create secret for key %s in namespace %s: %v", key, namespace, err)
 				}
@@ -232,45 +226,25 @@ func (c *Controller) syncHandler(key string) error {
 		}
 	}
 
-	_, err = c.cryptClientset.CoreV1alpha1().Crypts(crypt.Namespace).Update(crypt.DeepCopy())
-	if err != nil {
-		return err
-	}
-
 	c.recorder.Event(crypt, corev1.EventTypeNormal, SuccessSynced, MessageResourceSynced)
 	return nil
 }
 
-func (c *Controller) createSecret(sec v1alpha1.SecretDefinition, crypt *v1alpha1.Crypt, namespace string) error {
+func (c *Controller) createSecret(sec v1alpha1.SecretDefinition, crypt *v1alpha1.Crypt, namespace string) (*corev1.Secret, error) {
 	obj, err := c.store.Get(sec.GetKey())
 	if err != nil {
 		log.Errorf("could not get value from store: %v", err)
-		return err
+		return nil, err
 	}
 
-	secret := &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      sec.GetName(),
-			Namespace: namespace,
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(crypt, schema.GroupVersionKind{
-					Group:   v1alpha1.SchemeGroupVersion.Group,
-					Version: v1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Crypt",
-				}),
-			},
-			Labels:      sec.GetLabels(),
-			Annotations: sec.GetAnnotations(),
-		},
-		Type: corev1.SecretType(sec.GetType()),
-		Data: obj.GetData(),
-	}
-	_, err = c.kubeClientset.CoreV1().Secrets(namespace).Create(secret)
+	secret := newSecret(obj.GetData(), sec, crypt, namespace)
+
+	var result *corev1.Secret
+	result, err = c.kubeClientset.CoreV1().Secrets(namespace).Create(secret)
 	if err != nil && errors.IsAlreadyExists(err) {
-		_, err = c.kubeClientset.CoreV1().Secrets(namespace).Update(secret)
+		result, err = c.kubeClientset.CoreV1().Secrets(namespace).Update(secret)
 	}
-	return err
+	return result, err
 }
 
 func (c *Controller) handleNamespaceAdd(obj interface{}) {
@@ -358,8 +332,8 @@ func (c *Controller) handleSecretDelete(obj interface{}) {
 func (c *Controller) findNamespaceMatches(namespacePattern string) []string {
 	var result []string
 
-	namespaces, _ := c.kubeClientset.CoreV1().Namespaces().List(metav1.ListOptions{})
-	for _, ns := range namespaces.Items {
+	namespaces, _ := c.namespaceLister.List(labels.NewSelector())
+	for _, ns := range namespaces {
 		match, _ := regexp.MatchString(namespacePattern, ns.Name)
 		if match {
 			result = append(result, ns.Name)
@@ -367,4 +341,30 @@ func (c *Controller) findNamespaceMatches(namespacePattern string) []string {
 	}
 
 	return result
+}
+
+func newSecret(data map[string][]byte, secdef v1alpha1.SecretDefinition, parentCrypt *v1alpha1.Crypt, targetNamepsace string) *corev1.Secret {
+	secret := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Secret",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secdef.GetName(),
+			Namespace: targetNamepsace,
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(parentCrypt, schema.GroupVersionKind{
+					Group:   v1alpha1.SchemeGroupVersion.Group,
+					Version: v1alpha1.SchemeGroupVersion.Version,
+					Kind:    "Crypt",
+				}),
+			},
+			Labels:      secdef.GetLabels(),
+			Annotations: secdef.GetAnnotations(),
+		},
+		Type: corev1.SecretType(secdef.GetType()),
+		Data: data,
+	}
+
+	return secret
 }
