@@ -7,14 +7,14 @@ deployment:
   replicaCount: 1
 
 image:
-  repository: bluehoodie/crypt-controller
   tag: latest
   pullPolicy: Always
 
 nameOverride: ""
 fullnameOverride: ""
 
-storeType: invalid # replace with valid store type and configure below:
+# replace storeType with valid store type, enable the associated store and add any environment variables required.
+storeType: invalid
 store:
   consul:
     enabled: false
@@ -22,10 +22,6 @@ store:
   vault:
     enabled: false
     env: {}
-
-nodeSelector: {}
-tolerations: []
-affinity: {}
 
 serviceaccount:
   name: default
@@ -38,3 +34,9 @@ resources:
   requests:
     cpu: 100m
     memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
