@@ -4,17 +4,13 @@ package main
 
 import (
 	"flag"
-	"k8s.io/client-go/tools/record"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
-	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	log "k8s.io/klog"
 
@@ -85,18 +81,11 @@ func main() {
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, 30*time.Second)
 	cryptInformerFactory := informers.NewSharedInformerFactory(cryptClient, 10*time.Second)
 
-	log.V(4).Info("Creating event broadcaster")
-	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(log.Infof)
-	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeClient.CoreV1().Events("")})
-	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "crypt-controller"})
-
 	c := controller.New(kubeClient, cryptClient,
 		kubeInformerFactory.Core().V1().Namespaces(),
 		kubeInformerFactory.Core().V1().Secrets(),
 		cryptInformerFactory.Core().V1alpha1().Crypts(),
-		store,
-		recorder,
+		controller.WithStore(store),
 	)
 
 	kubeInformerFactory.Start(stop)

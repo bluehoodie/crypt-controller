@@ -109,7 +109,13 @@ func (f *fixture) initController() {
 	f.cryptInformer = cryptinformers.NewSharedInformerFactory(f.cryptclient, noResyncPeriodFunc())
 	f.k8sInformer = kubeinformers.NewSharedInformerFactory(f.kubeclient, noResyncPeriodFunc())
 
-	f.controller = New(f.kubeclient, f.cryptclient, f.k8sInformer.Core().V1().Namespaces(), f.k8sInformer.Core().V1().Secrets(), f.cryptInformer.Core().V1alpha1().Crypts(), f.store, record.NewFakeRecorder(10))
+	f.controller = New(f.kubeclient, f.cryptclient,
+		f.k8sInformer.Core().V1().Namespaces(),
+		f.k8sInformer.Core().V1().Secrets(),
+		f.cryptInformer.Core().V1alpha1().Crypts(),
+		WithStore(f.store),
+		WithEventRecorder(record.NewFakeRecorder(10)),
+	)
 	f.controller.cryptInformerSynced = alwaysReady
 	f.controller.namespaceInformerSynced = alwaysReady
 	f.controller.secretInformerSynced = alwaysReady

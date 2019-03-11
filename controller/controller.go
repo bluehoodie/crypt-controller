@@ -11,7 +11,6 @@ import (
 	informers "github.com/bluehoodie/crypt-controller/pkg/client/informers/externalversions/crypt/v1alpha1"
 	listers "github.com/bluehoodie/crypt-controller/pkg/client/listers/crypt/v1alpha1"
 	"github.com/bluehoodie/crypt-controller/pkg/store"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,6 +21,7 @@ import (
 	coreinformers "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
+	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	v1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
@@ -30,6 +30,8 @@ import (
 )
 
 const (
+	ComponentName = "crypt-controller"
+
 	// SuccessSynced is used as part of the Event 'reason' when a Crypt is synced
 	SuccessSynced = "Synced"
 
@@ -55,19 +57,31 @@ type Controller struct {
 	store store.Store
 }
 
+type Option func(*Controller)
+
+func WithStore(store store.Store) Option {
+	return func(c *Controller) {
+		c.store = store
+	}
+}
+
+func WithEventRecorder(recorder record.EventRecorder) Option {
+	return func(c *Controller) {
+		c.recorder = recorder
+	}
+}
+
 func New(
 	kubeClientset kubernetes.Interface,
 	cryptClientset clientset.Interface,
 	namespaceInformer coreinformers.NamespaceInformer,
 	secreteInformer coreinformers.SecretInformer,
 	cryptInformer informers.CryptInformer,
-	store store.Store,
-	eventRecorder record.EventRecorder,
+	opts ...Option,
 ) *Controller {
-
 	utilruntime.Must(cryptscheme.AddToScheme(scheme.Scheme))
 
-	c := Controller{
+	c := &Controller{
 		kubeClientset:  kubeClientset,
 		cryptClientset: cryptClientset,
 
@@ -78,11 +92,19 @@ func New(
 		cryptInformerSynced:     cryptInformer.Informer().HasSynced,
 		cryptLister:             cryptInformer.Lister(),
 
-		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "crypt-controller"),
+		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), ComponentName),
+	}
 
-		recorder: eventRecorder,
+	for _, opt := range opts {
+		opt(c)
+	}
 
-		store: store,
+	if c.recorder == nil {
+		setDefaultRecorder(c)
+	}
+
+	if c.store == nil {
+		panic("store not set")
 	}
 
 	cryptInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -106,7 +128,7 @@ func New(
 		},
 	})
 
-	return &c
+	return c
 }
 
 func (c *Controller) Run(workers int, stopChan <-chan struct{}) error {
@@ -367,4 +389,12 @@ func newSecret(data map[string][]byte, secdef v1alpha1.SecretDefinition, parentC
 	}
 
 	return secret
+}
+
+func setDefaultRecorder(c *Controller) {
+	eventBroadcaster := record.NewBroadcaster()
+	eventBroadcaster.StartLogging(log.Infof)
+	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: c.kubeClientset.CoreV1().Events("")})
+	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: ComponentName})
+	c.recorder = recorder
 }
