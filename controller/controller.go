@@ -59,12 +59,6 @@ type Controller struct {
 
 type Option func(*Controller)
 
-func WithStore(store store.Store) Option {
-	return func(c *Controller) {
-		c.store = store
-	}
-}
-
 func WithEventRecorder(recorder record.EventRecorder) Option {
 	return func(c *Controller) {
 		c.recorder = recorder
@@ -77,6 +71,7 @@ func New(
 	namespaceInformer coreinformers.NamespaceInformer,
 	secreteInformer coreinformers.SecretInformer,
 	cryptInformer informers.CryptInformer,
+	store store.Store,
 	opts ...Option,
 ) *Controller {
 	utilruntime.Must(cryptscheme.AddToScheme(scheme.Scheme))
@@ -92,6 +87,8 @@ func New(
 		cryptInformerSynced:     cryptInformer.Informer().HasSynced,
 		cryptLister:             cryptInformer.Lister(),
 
+		store: store,
+
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), ComponentName),
 	}
 
@@ -101,10 +98,6 @@ func New(
 
 	if c.recorder == nil {
 		setDefaultRecorder(c)
-	}
-
-	if c.store == nil {
-		panic("store not set")
 	}
 
 	cryptInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{

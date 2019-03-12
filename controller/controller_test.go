@@ -113,7 +113,7 @@ func (f *fixture) initController() {
 		f.k8sInformer.Core().V1().Namespaces(),
 		f.k8sInformer.Core().V1().Secrets(),
 		f.cryptInformer.Core().V1alpha1().Crypts(),
-		WithStore(f.store),
+		f.store,
 		WithEventRecorder(record.NewFakeRecorder(10)),
 	)
 	f.controller.cryptInformerSynced = alwaysReady

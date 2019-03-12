@@ -85,7 +85,7 @@ func main() {
 		kubeInformerFactory.Core().V1().Namespaces(),
 		kubeInformerFactory.Core().V1().Secrets(),
 		cryptInformerFactory.Core().V1alpha1().Crypts(),
-		controller.WithStore(store),
+		store,
 	)
 
 	kubeInformerFactory.Start(stop)
