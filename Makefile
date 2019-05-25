@@ -2,10 +2,10 @@ init-crd:
 	kubectl create -f ./artifacts/crd.yaml
 
 init-role:
-	kubectl create -f ./example/role.yaml -f ./example/binding.yaml
+	kubectl create -f ./example/role.yaml
 
 deploy:
-	kubectl apply -f ./example/crypt-controller-configmap.yaml -f ./example/crypt-controller.yaml
+	kubectl apply -f ./example/configmap.yaml -f ./example/deployment.yaml
 
 api-verify:
 	./gen/verify-codegen.sh
